@@ -11,15 +11,18 @@ type Bar struct {
 }
 
 func NewBar() *Bar {
-	clock := modules.CreateClock()
-	network := modules.CreateNetwork("wlp5s0")
-	battery := modules.CreateBattery()
-	modules := []modules.Module{ network, battery, clock }
+	modules := make([]modules.Module, 0, 10)
 	return &Bar{ modules }
+}
+
+// Adds a module to the module list
+func (b *Bar)  AddModule(module modules.Module) {
+	b.modules = append(b.modules, module)
 }
 
 func (b *Bar) GenerateOutput() string {
 	var output string = "["
+
 	for i, m := range b.modules {
 		if i == 0 {
 			output = fmt.Sprintf("%s%s", output, m.Output())
@@ -27,21 +30,33 @@ func (b *Bar) GenerateOutput() string {
 		}
 		output = fmt.Sprintf("%s,%s", output, m.Output())
 	}
+
 	return fmt.Sprintf("%s] ,", output)
 }
 
-func main() {
+func (b *Bar) Init() {
 	fmt.Print("{\"version\":1}")
 	fmt.Print("[")
 
-	// Initialize Bar
-	bar := NewBar()
+	// Add modules in desired order
+	// Last is the rightmost in the bar
+	b.AddModule(modules.CreateNetwork("enp4s0"))
+	b.AddModule(modules.CreateClock())
+}
 
-	// Print loop
+// Print loop
+func (b *Bar) Run() {
 	for {
-		fmt.Print(bar.GenerateOutput())
+		fmt.Print(b.GenerateOutput())
 		time.Sleep(time.Second)
 	}
+}
+
+// Entry
+func main() {
+	bar := NewBar()
+	bar.Init()
+	bar.Run()
 }
 
 

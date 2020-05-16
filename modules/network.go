@@ -1,35 +1,54 @@
 package modules 
 import (
-	"strings"
 	"fmt"
-	"log"
-	"os/exec"
+	"github.com/vishvananda/netlink"
 )
 
 type NetworkModule struct {
-	Interface string
-	Name string
+	dev string
+	
+	// bytes received and transmitted
+	rx uint64
+	tx uint64
+
 }
 
 func CreateNetwork(name string) *NetworkModule {
-	module := NetworkModule{name, "network"}
+	module := NetworkModule{name, 0, 0}
 	return &module
 }
 
+func (n *NetworkModule) activity(link netlink.Link) (uint64, uint64) {
+	rx := link.Attrs().Statistics.RxBytes
+	tx := link.Attrs().Statistics.TxBytes
+
+	defer func(){
+		n.rx = rx
+		n.tx = tx
+	}()
+
+	return rx - n.rx, tx - n.tx
+}
+
+func readable(bytes uint64) string {
+	if bytes > 1E6 {
+		return fmt.Sprintf("%.1fMB", float64(bytes / 1E6))
+	}
+	return fmt.Sprintf("%.1fKB", float64(bytes / 1000))
+}
+
+func status(r, t uint64) string {
+	return fmt.Sprintf("[%s, %s]", readable(r), readable(t))
+}
+
 func (n *NetworkModule) Output() string {
-	out, err := exec.Command("nmcli", "-f", 
-			"capabilities.carrier-detect,capabilities.speed", 
-			"d", "show", n.Interface).Output()
+	link, err := netlink.LinkByName(n.dev)
 	if err != nil {
-		log.Fatal(err)
+		return BadOutput("disconnected")
 	}
 	
-	arr := strings.Fields(string(out))
-	if arr[3] != "unknown"  {
-		return GoodOutput(fmt.Sprintf("[%s Mbit/s]", arr[3]))
-	}
-
-	return BadOutput("disconnected")
+	activity := status(n.activity(link))
+	return GoodOutput(activity)
 }
 
 	
