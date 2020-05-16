@@ -12,8 +12,9 @@ type Bar struct {
 
 func NewBar() *Bar {
 	clock := modules.CreateClock()
-	network := modules.CreateNetwork("enp4s0")
-	modules := []modules.Module{ network, clock }
+	network := modules.CreateNetwork("wlp5s0")
+	battery := modules.CreateBattery()
+	modules := []modules.Module{ network, battery, clock }
 	return &Bar{ modules }
 }
 

@@ -25,8 +25,7 @@ func (n *NetworkModule) Output() string {
 	}
 	
 	arr := strings.Fields(string(out))
-	
-	if arr[1] == "yes" {
+	if arr[3] != "unknown"  {
 		return GoodOutput(fmt.Sprintf("[%s Mbit/s]", arr[3]))
 	}
 
