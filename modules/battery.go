@@ -10,7 +10,7 @@ type BatteryModule struct {
 	full	float64
 }
 
-func CreateBattery() *BatteryModule {
+func Battery() *BatteryModule {
 	module := BatteryModule{battery.Unknown, 0.0, 1.0}
 	module.update()
 	return &module

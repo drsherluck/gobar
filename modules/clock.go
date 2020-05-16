@@ -10,7 +10,7 @@ type ClockModule struct {
 	Name   string
 }
 
-func CreateClock() *ClockModule {
+func Clock() *ClockModule {
 	clock := ClockModule{"Mon 02, Jan 15:04", "local_time"}
 	return &clock
 }

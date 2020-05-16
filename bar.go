@@ -40,9 +40,9 @@ func (b *Bar) Init() {
 
 	// Add modules in desired order
 	// Last is the rightmost in the bar
-	b.AddModule(modules.CreateNetwork("enp4s0"))
+	b.AddModule(modules.Network("enp4s0"))
 	b.AddModule(modules.Volume())
-	b.AddModule(modules.CreateClock())
+	b.AddModule(modules.Clock())
 }
 
 // Print loop

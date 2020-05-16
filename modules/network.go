@@ -13,7 +13,7 @@ type NetworkModule struct {
 
 }
 
-func CreateNetwork(name string) *NetworkModule {
+func Network(name string) *NetworkModule {
 	module := NetworkModule{name, 0, 0}
 	return &module
 }
