@@ -16,6 +16,6 @@ func Clock() *ClockModule {
 }
 
 func (c *ClockModule) Output() string {
-	now := time.Now()
+	now := time.Now().Local()
 	return SimpleOutput(now.Format(c.layout))
 }

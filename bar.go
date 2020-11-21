@@ -42,6 +42,7 @@ func (b *Bar) Init() {
 	// Last is the rightmost in the bar
 	b.AddModule(modules.Network("enp4s0"))
 	b.AddModule(modules.Volume())
+	b.AddModule(modules.Memory())
 	b.AddModule(modules.Clock())
 }
 
