@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
-	"./modules"
+	"github.com/drsherluck/gobar/modules"
 )
 
 type Bar struct {

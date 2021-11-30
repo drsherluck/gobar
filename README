@@ -1,0 +1,3 @@
+Simple i3 status bar made in go
+
+Displays upload and download rates, current volume, current memory usage and the date.
