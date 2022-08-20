@@ -1,13 +1,14 @@
 package modules
+
 import (
-	"github.com/distatus/battery"
 	"fmt"
+	"github.com/distatus/battery"
 )
 
 type BatteryModule struct {
-	state	battery.State
+	state   battery.State
 	current float64
-	full	float64
+	full    float64
 }
 
 func Battery() *BatteryModule {
@@ -27,11 +28,11 @@ func (b *BatteryModule) update() {
 }
 
 func (b *BatteryModule) charge() int {
-	return int((b.current / b.full) * 100) 
+	return int((b.current / b.full) * 100)
 }
 
 func (b *BatteryModule) Output() string {
-	b.update() 
+	b.update()
 
 	// Create output string
 	charge := b.charge()
@@ -50,5 +51,3 @@ func (b *BatteryModule) Output() string {
 
 	}
 }
-
-

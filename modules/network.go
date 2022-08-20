@@ -1,4 +1,5 @@
-package modules 
+package modules
+
 import (
 	"fmt"
 	"github.com/vishvananda/netlink"
@@ -6,11 +7,10 @@ import (
 
 type NetworkModule struct {
 	dev string
-	
+
 	// bytes received and transmitted
 	rx uint64
 	tx uint64
-
 }
 
 func Network(name string) *NetworkModule {
@@ -22,7 +22,7 @@ func (n *NetworkModule) activity(link netlink.Link) (uint64, uint64) {
 	rx := link.Attrs().Statistics.RxBytes
 	tx := link.Attrs().Statistics.TxBytes
 
-	defer func(){
+	defer func() {
 		n.rx = rx
 		n.tx = tx
 	}()
@@ -31,10 +31,10 @@ func (n *NetworkModule) activity(link netlink.Link) (uint64, uint64) {
 }
 
 func readable(bytes uint64) string {
-	if bytes > 1E6 {
-		return fmt.Sprintf("%.1fMB", float64(bytes / 1E6))
+	if bytes > 1e6 {
+		return fmt.Sprintf("%.1fMB", float64(bytes/1e6))
 	}
-	return fmt.Sprintf("%.1fKB", float64(bytes / 1000))
+	return fmt.Sprintf("%.1fKB", float64(bytes/1000))
 }
 
 func status(r, t uint64) string {
@@ -46,9 +46,7 @@ func (n *NetworkModule) Output() string {
 	if err != nil {
 		return BadOutput("disconnected")
 	}
-	
+
 	activity := status(n.activity(link))
 	return GoodOutput(activity)
 }
-
-	

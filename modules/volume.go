@@ -1,12 +1,13 @@
 package modules
+
 import (
 	"fmt"
 	. "github.com/itchyny/volume-go"
 )
 
-type VolumeModule struct {}
+type VolumeModule struct{}
 
-func Volume() ( *VolumeModule) {
+func Volume() *VolumeModule {
 	return &VolumeModule{}
 }
 
@@ -20,7 +21,7 @@ func (m *VolumeModule) Output() string {
 	if err != nil {
 		return BadOutput("?")
 	}
-	
+
 	if muted {
 		return SimpleOutput("Muted")
 	}

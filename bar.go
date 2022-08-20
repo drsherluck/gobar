@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"github.com/drsherluck/gobar/modules"
+	"time"
 )
 
 type Bar struct {
@@ -12,11 +12,11 @@ type Bar struct {
 
 func NewBar() *Bar {
 	modules := make([]modules.Module, 0, 10)
-	return &Bar{ modules }
+	return &Bar{modules}
 }
 
 // Adds a module to the module list
-func (b *Bar)  AddModule(module modules.Module) {
+func (b *Bar) AddModule(module modules.Module) {
 	b.modules = append(b.modules, module)
 }
 
@@ -43,6 +43,7 @@ func (b *Bar) Init() {
 	b.AddModule(modules.Network("enp4s0"))
 	b.AddModule(modules.Volume())
 	b.AddModule(modules.Memory())
+	b.AddModule(modules.Weather("Delft", "NL"))
 	b.AddModule(modules.Clock())
 }
 
@@ -60,5 +61,3 @@ func main() {
 	bar.Init()
 	bar.Run()
 }
-
-
