@@ -3,6 +3,7 @@ package modules
 import (
 	"fmt"
 	"github.com/vishvananda/netlink"
+	"net"
 )
 
 type NetworkModule struct {
@@ -37,8 +38,8 @@ func readable(bytes uint64) string {
 	return fmt.Sprintf("%.1fKB", float64(bytes/1000))
 }
 
-func status(r, t uint64) string {
-	return fmt.Sprintf("[%s, %s]", readable(r), readable(t))
+func status(ip string, r, t uint64) string {
+	return fmt.Sprintf("%s [%s, %s]", ip, readable(r), readable(t))
 }
 
 func (n *NetworkModule) Output() string {
@@ -46,7 +47,17 @@ func (n *NetworkModule) Output() string {
 	if err != nil {
 		return BadOutput("disconnected")
 	}
-
-	activity := status(n.activity(link))
+	iface, _ := net.InterfaceByName(n.dev)
+	addrs, err := iface.Addrs()
+	ip := ""
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
+				ip = ipnet.IP.String()
+			}
+		}
+	}
+	r, t := n.activity(link)
+	activity := status(ip, r, t)
 	return GoodOutput(activity)
 }
