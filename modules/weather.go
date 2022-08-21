@@ -9,25 +9,28 @@ import (
 	"time"
 )
 
+var ApiKey string
+
+type apidata = map[string]interface{}
+
 type geodata struct {
-	Name string  `json:"name"`
-	Lat  float32 `json:"lat"`
-	Lon  float32 `json:"lon"`
+	name string  `json:"name"`
+	lat  float32 `json:"lat"`
+	lon  float32 `json:"lon"`
+}
+
+type result struct {
+	temp int32
+	err  bool
 }
 
 type WeatherModule struct {
 	city        string
 	countryCode string
-	lat         float32
-	lon         float32
 	err         bool
+	ch          chan result
+	temp        int32
 }
-
-var (
-	ApiKey  string
-	oldtime = time.Now().Add(-time.Hour)
-	temp    = int(0)
-)
 
 func get(url string, data any) bool {
 	resp, err := http.Get(url)
@@ -44,6 +47,33 @@ func get(url string, data any) bool {
 	return err != nil
 }
 
+func gettemp(ch chan result, lat, lon float32) {
+	url := fmt.Sprintf(
+		"https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s",
+		lat,
+		lon,
+		ApiKey,
+	)
+
+	data := make(apidata)
+	if get(url, &data) {
+		ch <- result{0, true}
+	} else {
+		ch <- result{
+			int32(math.Round(data["main"].(apidata)["temp"].(float64))),
+			true,
+		}
+	}
+}
+
+func fetch(ch chan result, lat, lon float32) {
+	ticker := time.NewTicker(time.Minute)
+	gettemp(ch, lat, lon)
+	for _ = range ticker.C {
+		gettemp(ch, lat, lon)
+	}
+}
+
 func Weather(city, countryCode string) *WeatherModule {
 	url := fmt.Sprintf(
 		"http://api.openweathermap.org/geo/1.0/direct?q=%s,%s&limit=1&appid=%s",
@@ -53,28 +83,28 @@ func Weather(city, countryCode string) *WeatherModule {
 	)
 	location := make([]geodata, 1)
 	err := get(url, &location)
-	weather := WeatherModule{city, countryCode, location[0].Lat, location[0].Lon, err}
+	ch := make(chan result)
+	weather := WeatherModule{
+		city,
+		countryCode,
+		err,
+		ch,
+		0,
+	}
+	if err == false {
+		go fetch(ch, location[0].lat, location[0].lon)
+	}
 	return &weather
 }
 
 func (c *WeatherModule) Output() string {
-	if time.Now().Sub(oldtime).Minutes() >= 1.0 {
-		oldtime = time.Now()
-		if c.err == true {
-			return BadOutput("missing geolocation")
-		}
-		url := fmt.Sprintf(
-			"https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s",
-			c.lat,
-			c.lon,
-			ApiKey,
-		)
-
-		data := make(map[string]interface{})
-		if get(url, &data) {
-			return BadOutput("error")
-		}
-		temp = int(math.Round(data["main"].(map[string]interface{})["temp"].(float64)))
+	if c.err == true {
+		return BadOutput("missing geolocation")
 	}
-	return SimpleOutput(fmt.Sprintf("%d°C", temp))
+	select {
+	case res := <-c.ch:
+		c.temp = res.temp
+	default:
+	}
+	return SimpleOutput(fmt.Sprintf("%d°C", c.temp))
 }

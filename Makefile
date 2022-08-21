@@ -1,6 +1,9 @@
-LDFLAGS="-X github.com/drsherluck/gobar/modules.ApiKey=${OWM_API_KEY}"
+LDFLAGS := "-X github.com/drsherluck/gobar/modules.ApiKey=${OWM_API_KEY}"
 
-run:
+fmt:
+	go fmt github.com/drsherluck/gobar/...
+
+run: fmt
 	go run -ldflags=${LDFLAGS} bar.go
 
 build:

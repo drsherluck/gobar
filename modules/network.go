@@ -8,21 +8,58 @@ import (
 	"time"
 )
 
-var (
-    oldtime2 = time.Now().Add(-time.Hour)
-    isConnected = false
-)
-
 type NetworkModule struct {
 	dev string
 
 	// bytes received and transmitted
 	rx uint64
 	tx uint64
+	// connectivity check
+	ch        chan bool
+	connected bool
+}
+
+func connectivity(ch chan bool) {
+	ticker := time.NewTicker(5 * time.Second)
+	timeout := time.Duration(time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	for _ = range ticker.C {
+		_, err := client.Get("http://google.com")
+		ch <- err == nil
+	}
+}
+
+func readable(bytes uint64) string {
+	if bytes > 1e6 {
+		return fmt.Sprintf("%.1fMB", float64(bytes/1e6))
+	}
+	return fmt.Sprintf("%.1fKB", float64(bytes/1000))
+}
+
+func status(r, t uint64) string {
+	return fmt.Sprintf("[%s, %s]", readable(r), readable(t))
+}
+
+func ip(dev string) string {
+	iface, _ := net.InterfaceByName(dev)
+	addrs, err := iface.Addrs()
+	ip := ""
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
+				ip = ipnet.IP.String()
+			}
+		}
+	}
+	return ip
 }
 
 func Network(name string) *NetworkModule {
-	module := NetworkModule{name, 0, 0}
+	connected := make(chan bool)
+	module := NetworkModule{name, 0, 0, connected, false}
+	go connectivity(connected)
 	return &module
 }
 
@@ -38,47 +75,18 @@ func (n *NetworkModule) activity(link netlink.Link) (uint64, uint64) {
 	return rx - n.rx, tx - n.tx
 }
 
-func readable(bytes uint64) string {
-	if bytes > 1e6 {
-		return fmt.Sprintf("%.1fMB", float64(bytes/1e6))
-	}
-	return fmt.Sprintf("%.1fKB", float64(bytes/1000))
-}
-
-func status(r, t uint64) string {
-	return fmt.Sprintf("[%s, %s]", readable(r), readable(t))
-}
-
-func connected() bool {
-	timeout := time.Duration(time.Second)
-	client := http.Client{
-		Timeout: timeout,
-	}
-	_, err := client.Get("http://google.com")
-	return err == nil
-}
-
 func (n *NetworkModule) Output() string {
 	link, err := netlink.LinkByName(n.dev)
 	if err != nil {
 		return BadOutput("disconnected")
 	}
-	iface, _ := net.InterfaceByName(n.dev)
-	addrs, err := iface.Addrs()
-	ip := ""
-	if err == nil {
-		for _, addr := range addrs {
-			if ipnet, ok := addr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
-				ip = ipnet.IP.String()
-			}
-		}
+	activity := fmt.Sprintf("%s %s", ip(n.dev), status(n.activity(link)))
+	select {
+	case status := <-n.ch:
+		n.connected = status
+	default:
 	}
-	activity := fmt.Sprintf("%s %s", ip, status(n.activity(link)))
-	if time.Now().Sub(oldtime2).Seconds() >= 5 {
-		isConnected = connected()
-        oldtime2 = time.Now()
-	}
-	if isConnected == false {
+	if n.connected {
 		return BadOutput(activity)
 	}
 	return GoodOutput(activity)
