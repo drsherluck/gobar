@@ -6,8 +6,8 @@ fmt:
 run: fmt
 	go run -ldflags=${LDFLAGS} bar.go
 
-build:
+build: fmt
 	go build -ldflags=${LDFLAGS}
 
-install:
+install: fmt
 	sudo go build -ldflags=${LDFLAGS} -o /usr/bin/

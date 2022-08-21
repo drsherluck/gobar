@@ -21,7 +21,7 @@ type NetworkModule struct {
 
 func connectivity(ch chan bool) {
 	ticker := time.NewTicker(5 * time.Second)
-	timeout := time.Duration(time.Second)
+	timeout := time.Duration(time.Second * 2)
 	client := http.Client{
 		Timeout: timeout,
 	}
@@ -86,7 +86,7 @@ func (n *NetworkModule) Output() string {
 		n.connected = status
 	default:
 	}
-	if n.connected {
+	if n.connected == false {
 		return BadOutput(activity)
 	}
 	return GoodOutput(activity)
