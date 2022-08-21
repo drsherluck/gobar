@@ -9,14 +9,15 @@ import (
 	"time"
 )
 
-var ApiKey string
+var (
+	ApiKey string
+)
 
 type apidata = map[string]interface{}
 
 type geodata struct {
-	name string  `json:"name"`
-	lat  float32 `json:"lat"`
-	lon  float32 `json:"lon"`
+	lat float32 `json:"lat"`
+	lon float32 `json:"lon"`
 }
 
 type result struct {
@@ -25,11 +26,9 @@ type result struct {
 }
 
 type WeatherModule struct {
-	city        string
-	countryCode string
-	err         bool
-	ch          chan result
-	temp        int32
+	err  bool
+	ch   chan result
+	temp int32
 }
 
 func get(url string, data any) bool {
@@ -40,6 +39,7 @@ func get(url string, data any) bool {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
 	if err != nil {
 		return true
 	}
@@ -54,7 +54,6 @@ func gettemp(ch chan result, lat, lon float32) {
 		lon,
 		ApiKey,
 	)
-
 	data := make(apidata)
 	if get(url, &data) {
 		ch <- result{0, true}
@@ -75,24 +74,18 @@ func fetch(ch chan result, lat, lon float32) {
 }
 
 func Weather(city, countryCode string) *WeatherModule {
-	url := fmt.Sprintf(
-		"http://api.openweathermap.org/geo/1.0/direct?q=%s,%s&limit=1&appid=%s",
-		city,
-		countryCode,
-		ApiKey,
-	)
-	location := make([]geodata, 1)
+	url := fmt.Sprintf("http://ip-api.com/json/")
+	location := geodata{}
 	err := get(url, &location)
+	fmt.Println(location)
 	ch := make(chan result)
 	weather := WeatherModule{
-		city,
-		countryCode,
 		err,
 		ch,
 		0,
 	}
 	if err == false {
-		go fetch(ch, location[0].lat, location[0].lon)
+		go fetch(ch, location.lat, location.lon)
 	}
 	return &weather
 }
