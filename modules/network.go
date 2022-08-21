@@ -4,6 +4,13 @@ import (
 	"fmt"
 	"github.com/vishvananda/netlink"
 	"net"
+	"net/http"
+	"time"
+)
+
+var (
+    oldtime2 = time.Now().Add(-time.Hour)
+    isConnected = false
 )
 
 type NetworkModule struct {
@@ -38,8 +45,17 @@ func readable(bytes uint64) string {
 	return fmt.Sprintf("%.1fKB", float64(bytes/1000))
 }
 
-func status(ip string, r, t uint64) string {
-	return fmt.Sprintf("%s [%s, %s]", ip, readable(r), readable(t))
+func status(r, t uint64) string {
+	return fmt.Sprintf("[%s, %s]", readable(r), readable(t))
+}
+
+func connected() bool {
+	timeout := time.Duration(time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	_, err := client.Get("http://google.com")
+	return err == nil
 }
 
 func (n *NetworkModule) Output() string {
@@ -57,7 +73,13 @@ func (n *NetworkModule) Output() string {
 			}
 		}
 	}
-	r, t := n.activity(link)
-	activity := status(ip, r, t)
+	activity := fmt.Sprintf("%s %s", ip, status(n.activity(link)))
+	if time.Now().Sub(oldtime2).Seconds() >= 5 {
+		isConnected = connected()
+        oldtime2 = time.Now()
+	}
+	if isConnected == false {
+		return BadOutput(activity)
+	}
 	return GoodOutput(activity)
 }
