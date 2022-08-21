@@ -3,19 +3,23 @@ package main
 import (
 	"fmt"
 	"github.com/drsherluck/gobar/modules"
+	"io"
 	"os"
 	"time"
 )
 
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
+func isEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return true, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
 		return true, nil
 	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, nil
+	return false, err
 }
 
 type Bar struct {
@@ -52,11 +56,11 @@ func (b *Bar) Init() {
 
 	// Add modules in desired order
 	// Last is the rightmost in the bar
-	b.AddModule(modules.Network("wlp0s20f3"))
+	b.AddModule(modules.Network("enp4s0"))
 	b.AddModule(modules.Volume())
 	b.AddModule(modules.Memory())
-	b.AddModule(modules.Weather("Delft", "NL"))
-	if ok, _ := exists("/sys/class/power_supply"); ok {
+	b.AddModule(modules.Weather())
+	if ok, _ := isEmpty("/sys/class/power_supply"); ok == false {
 		b.AddModule(modules.Battery())
 	}
 	b.AddModule(modules.Clock())
