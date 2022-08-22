@@ -16,8 +16,8 @@ var (
 type apidata = map[string]interface{}
 
 type geodata struct {
-	lat float32 `json:"lat"`
-	lon float32 `json:"lon"`
+	Lat float32 `json:"lat"`
+	Lon float32 `json:"lon"`
 }
 
 type result struct {
@@ -80,7 +80,7 @@ func Weather() *WeatherModule {
 	// channel and ticker to fetch weather data
 	ch := make(chan result)
 	if err == false {
-		go fetch(ch, location.lat, location.lon)
+		go fetch(ch, location.Lat, location.Lon)
 	}
 	weather := WeatherModule{err, ch, 0}
 	return &weather
