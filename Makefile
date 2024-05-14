@@ -1,4 +1,4 @@
-LDFLAGS := "-X github.com/drsherluck/gobar/modules.ApiKey=${OWM_API_KEY}"
+LDFLAGS := "-X github.com/drsherluck/gobar/modules.OWM_API_KEY=${OWM_API_KEY}"
 
 fmt:
 	go fmt github.com/drsherluck/gobar/...
