@@ -51,13 +51,13 @@ func (b *Bar) GenerateOutput() string {
 	return fmt.Sprintf("%s],", output)
 }
 
-func (b *Bar) Init(nic string) {
-	b.AddModule(modules.Network(nic)) //"wlp0s20f3"))
+func (b *Bar) Init(nic string, noBat bool) {
+	b.AddModule(modules.Network(nic))
 	b.AddModule(modules.Volume())
 	b.AddModule(modules.CpuTemp())
 	b.AddModule(modules.Memory())
 	b.AddModule(modules.Weather())
-	if ok, _ := isEmpty("/sys/class/power_supply"); ok == false {
+	if ok, _ := isEmpty("/sys/class/power_supply"); ok == false && noBat == false {
 		b.AddModule(modules.Battery())
 	}
 	b.AddModule(modules.Clock())
@@ -75,7 +75,8 @@ func (b *Bar) Run() {
 
 type argT struct {
 	cli.Helper
-	NIC string `cli:"nic" usage:"the network interface to poll from" dft:"enp4s0"`
+	NIC            string `cli:"nic" usage:"the network interface to poll from" dft:"enp4s0"`
+	ExcludeBattery bool   `cli:"no-bat" usage:"excludes the battery module" dft:"false"`
 }
 
 // Entry
@@ -83,7 +84,7 @@ func main() {
 	os.Exit(cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 		bar := NewBar()
-		bar.Init(argv.NIC)
+		bar.Init(argv.NIC, argv.ExcludeBattery)
 		bar.Run()
 		return nil
 	}))
