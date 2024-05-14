@@ -2,11 +2,13 @@ package modules
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -28,19 +30,33 @@ type WeatherModule struct {
 	last result
 }
 
-func get(url string, data any) bool {
+func get(url string, data any) error {
 	resp, err := http.Get(url)
 	if err != nil {
-		return true
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return true
+		return err
 	}
-	err = json.Unmarshal(body, &data)
-	return err != nil
+	return json.Unmarshal(body, &data)
+}
+
+func check_api_response(data apidata) error {
+	val, ok := data["cod"].(string)
+	if ok == false {
+		return errors.New("could not get code")
+	}
+	cod, err := strconv.Atoi(val)
+	if err != nil {
+		return err
+	}
+	if cod != 200 {
+		return errors.New(data["message"].(string))
+	}
+	return nil
 }
 
 func gettemp(ch chan result, lat, lon float32, token string) {
@@ -51,11 +67,15 @@ func gettemp(ch chan result, lat, lon float32, token string) {
 		token,
 	)
 	data := make(apidata)
-	if get(url, &data) {
+	if get(url, &data) != nil {
 		ch <- result{0, true}
 	} else {
-		t := math.Round(data["main"].(apidata)["temp"].(float64))
-		ch <- result{int32(t), false}
+		if check_api_response(data) != nil {
+			ch <- result{0, true}
+		} else {
+			t := math.Round(data["main"].(apidata)["temp"].(float64))
+			ch <- result{int32(t), false}
+		}
 	}
 }
 
@@ -71,11 +91,11 @@ func fetch(ch chan result, lat, lon float32) {
 func Weather() *WeatherModule {
 	url := fmt.Sprintf("http://ip-api.com/json/")
 	loc := geodata{}
-	err := get(url, &loc)
+	err := get(url, &loc) == nil
 
 	// channel and ticker to fetch weather data
 	ch := make(chan result)
-	if err == false {
+	if err != false {
 		go fetch(ch, loc.Lat, loc.Lon)
 	}
 	weather := WeatherModule{err, ch, result{0, false}}
