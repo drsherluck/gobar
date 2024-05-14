@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/drsherluck/gobar/modules"
+	"github.com/mkideal/cli"
 	"io"
 	"os"
 	"time"
@@ -50,14 +51,10 @@ func (b *Bar) GenerateOutput() string {
 	return fmt.Sprintf("%s],", output)
 }
 
-func (b *Bar) Init() {
-	fmt.Print("{\"version\":1}\n")
-	fmt.Print("[")
-
-	// Add modules in desired order
-	// Last is the rightmost in the bar
-	b.AddModule(modules.Network("enp4s0"))
+func (b *Bar) Init(nic string) {
+	b.AddModule(modules.Network(nic)) //"wlp0s20f3"))
 	b.AddModule(modules.Volume())
+	b.AddModule(modules.CpuTemp())
 	b.AddModule(modules.Memory())
 	b.AddModule(modules.Weather())
 	if ok, _ := isEmpty("/sys/class/power_supply"); ok == false {
@@ -68,15 +65,26 @@ func (b *Bar) Init() {
 
 // Print loop
 func (b *Bar) Run() {
+	fmt.Print("{\"version\":1}\n")
+	fmt.Print("[")
 	for {
 		fmt.Print(b.GenerateOutput())
 		time.Sleep(time.Second)
 	}
 }
 
+type argT struct {
+	cli.Helper
+	NIC string `cli:"nic" usage:"the network interface to poll from" dft:"enp4s0"`
+}
+
 // Entry
 func main() {
-	bar := NewBar()
-	bar.Init()
-	bar.Run()
+	os.Exit(cli.Run(new(argT), func(ctx *cli.Context) error {
+		argv := ctx.Argv().(*argT)
+		bar := NewBar()
+		bar.Init(argv.NIC)
+		bar.Run()
+		return nil
+	}))
 }

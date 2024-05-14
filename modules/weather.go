@@ -6,11 +6,8 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"os"
 	"time"
-)
-
-var (
-	OWM_API_KEY string
 )
 
 type apidata = map[string]interface{}
@@ -28,7 +25,7 @@ type result struct {
 type WeatherModule struct {
 	err  bool
 	ch   chan result
-	temp int32
+	last result
 }
 
 func get(url string, data any) bool {
@@ -46,54 +43,56 @@ func get(url string, data any) bool {
 	return err != nil
 }
 
-func gettemp(ch chan result, lat, lon float32) {
+func gettemp(ch chan result, lat, lon float32, token string) {
 	url := fmt.Sprintf(
 		"https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s",
 		lat,
 		lon,
-		OWM_API_KEY,
+		token,
 	)
 	data := make(apidata)
 	if get(url, &data) {
 		ch <- result{0, true}
 	} else {
-		ch <- result{
-			int32(math.Round(data["main"].(apidata)["temp"].(float64))),
-			true,
-		}
+		t := math.Round(data["main"].(apidata)["temp"].(float64))
+		ch <- result{int32(t), false}
 	}
 }
 
 func fetch(ch chan result, lat, lon float32) {
+	token := os.Getenv("OPEN_WEATHERMAP_API_KEY")
 	ticker := time.NewTicker(time.Minute)
-	gettemp(ch, lat, lon)
+	gettemp(ch, lat, lon, token)
 	for _ = range ticker.C {
-		gettemp(ch, lat, lon)
+		gettemp(ch, lat, lon, token)
 	}
 }
 
 func Weather() *WeatherModule {
 	url := fmt.Sprintf("http://ip-api.com/json/")
-	location := geodata{}
-	err := get(url, &location)
+	loc := geodata{}
+	err := get(url, &loc)
 
 	// channel and ticker to fetch weather data
 	ch := make(chan result)
 	if err == false {
-		go fetch(ch, location.Lat, location.Lon)
+		go fetch(ch, loc.Lat, loc.Lon)
 	}
-	weather := WeatherModule{err, ch, 0}
+	weather := WeatherModule{err, ch, result{0, false}}
 	return &weather
 }
 
 func (c *WeatherModule) Output() string {
-	if c.err == true {
+	if c.err {
 		return BadOutput("missing geolocation")
 	}
 	select {
 	case res := <-c.ch:
-		c.temp = res.temp
+		c.last = res
 	default:
 	}
-	return SimpleOutput(fmt.Sprintf("%d°C", c.temp))
+	if c.last.err {
+		return BadOutput("error")
+	}
+	return SimpleOutput(fmt.Sprintf("%d°C", c.last.temp))
 }
