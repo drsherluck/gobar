@@ -3,8 +3,20 @@ package main
 import (
 	"fmt"
 	"github.com/drsherluck/gobar/modules"
+	"os"
 	"time"
 )
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, nil
+}
 
 type Bar struct {
 	modules []modules.Module
@@ -44,7 +56,9 @@ func (b *Bar) Init() {
 	b.AddModule(modules.Volume())
 	b.AddModule(modules.Memory())
 	b.AddModule(modules.Weather("Delft", "NL"))
-	b.AddModule(modules.Battery())
+	if ok, _ := exists("/sys/class/power_supply"); ok {
+		b.AddModule(modules.Battery())
+	}
 	b.AddModule(modules.Clock())
 }
 
