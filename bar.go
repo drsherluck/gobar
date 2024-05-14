@@ -31,19 +31,20 @@ func (b *Bar) GenerateOutput() string {
 		output = fmt.Sprintf("%s,%s", output, m.Output())
 	}
 
-	return fmt.Sprintf("%s] ,", output)
+	return fmt.Sprintf("%s],", output)
 }
 
 func (b *Bar) Init() {
-	fmt.Print("{\"version\":1}")
+	fmt.Print("{\"version\":1}\n")
 	fmt.Print("[")
 
 	// Add modules in desired order
 	// Last is the rightmost in the bar
-	b.AddModule(modules.Network("enp4s0"))
+	b.AddModule(modules.Network("wlp0s20f3"))
 	b.AddModule(modules.Volume())
 	b.AddModule(modules.Memory())
 	b.AddModule(modules.Weather("Delft", "NL"))
+	b.AddModule(modules.Battery())
 	b.AddModule(modules.Clock())
 }
 
