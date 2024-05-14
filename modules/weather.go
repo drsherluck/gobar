@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ApiKey string
+	OWM_API_KEY string
 )
 
 type apidata = map[string]interface{}
@@ -39,7 +39,6 @@ func get(url string, data any) bool {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(body))
 	if err != nil {
 		return true
 	}
@@ -52,7 +51,7 @@ func gettemp(ch chan result, lat, lon float32) {
 		"https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s",
 		lat,
 		lon,
-		ApiKey,
+		OWM_API_KEY,
 	)
 	data := make(apidata)
 	if get(url, &data) {
@@ -73,20 +72,17 @@ func fetch(ch chan result, lat, lon float32) {
 	}
 }
 
-func Weather(city, countryCode string) *WeatherModule {
+func Weather() *WeatherModule {
 	url := fmt.Sprintf("http://ip-api.com/json/")
 	location := geodata{}
 	err := get(url, &location)
-	fmt.Println(location)
+
+	// channel and ticker to fetch weather data
 	ch := make(chan result)
-	weather := WeatherModule{
-		err,
-		ch,
-		0,
-	}
 	if err == false {
 		go fetch(ch, location.lat, location.lon)
 	}
+	weather := WeatherModule{err, ch, 0}
 	return &weather
 }
 
