@@ -1,13 +1,9 @@
-LDFLAGS := "-X github.com/drsherluck/gobar/modules.OWM_API_KEY=${OWM_API_KEY}"
-
 fmt:
 	go fmt github.com/drsherluck/gobar/...
 
 run: fmt
-	go run -ldflags=${LDFLAGS} bar.go
-
+	go run bar.go
 build: fmt
-	go build -ldflags=${LDFLAGS}
-
+	go build 
 install: fmt
-	sudo go build -ldflags=${LDFLAGS} -o /usr/bin/
+	sudo go build -o /usr/bin/

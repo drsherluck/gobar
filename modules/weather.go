@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 )
 
@@ -21,7 +19,23 @@ type geodata struct {
 
 type result struct {
 	temp int32
-	err  bool
+	err  error
+}
+
+func Err(err error) result {
+	return result{0, err}
+}
+
+func Ok(temp int32) result {
+	return result{temp, nil}
+}
+
+func (r *result) isOk() bool {
+	return r.err == nil
+}
+
+func (r *result) isErr() bool {
+	return r.err != nil
 }
 
 type WeatherModule struct {
@@ -44,61 +58,49 @@ func get(url string, data any) error {
 	return json.Unmarshal(body, &data)
 }
 
-func check_api_response(data apidata) error {
-	val, ok := data["cod"].(string)
-	if ok == false {
-		return errors.New("could not get code")
+func get_temperature_from_response(data apidata) result {
+	val, ok := data["error"].(bool)
+	if ok && val {
+		return Err(errors.New(data["reason"].(string)))
 	}
-	cod, err := strconv.Atoi(val)
-	if err != nil {
-		return err
-	}
-	if cod != 200 {
-		return errors.New(data["message"].(string))
-	}
-	return nil
+	t := math.Round(data["current"].(apidata)["temperature_2m"].(float64))
+	return Ok(int32(t))
 }
 
-func gettemp(ch chan result, lat, lon float32, token string) {
+func get_temperature(ch chan result, lat, lon float32) {
 	url := fmt.Sprintf(
-		"https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s",
+		"https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&current=temperature_2m",
 		lat,
 		lon,
-		token,
 	)
 	data := make(apidata)
-	if get(url, &data) != nil {
-		ch <- result{0, true}
+	err := get(url, &data)
+	if err != nil {
+		ch <- Err(err)
 	} else {
-		if check_api_response(data) != nil {
-			ch <- result{0, true}
-		} else {
-			t := math.Round(data["main"].(apidata)["temp"].(float64))
-			ch <- result{int32(t), false}
-		}
+		ch <- get_temperature_from_response(data)
 	}
 }
 
 func fetch(ch chan result, lat, lon float32) {
-	token := os.Getenv("OPEN_WEATHERMAP_API_KEY")
 	ticker := time.NewTicker(time.Minute)
-	gettemp(ch, lat, lon, token)
+	get_temperature(ch, lat, lon)
 	for _ = range ticker.C {
-		gettemp(ch, lat, lon, token)
+		get_temperature(ch, lat, lon)
 	}
 }
 
 func Weather() *WeatherModule {
 	url := fmt.Sprintf("http://ip-api.com/json/")
 	loc := geodata{}
-	err := get(url, &loc) == nil
+	err := get(url, &loc)
 
 	// channel and ticker to fetch weather data
 	ch := make(chan result)
-	if err != false {
+	if err == nil {
 		go fetch(ch, loc.Lat, loc.Lon)
 	}
-	weather := WeatherModule{err, ch, result{0, false}}
+	weather := WeatherModule{err != nil, ch, Ok(0)}
 	return &weather
 }
 
@@ -111,7 +113,7 @@ func (c *WeatherModule) Output() string {
 		c.last = res
 	default:
 	}
-	if c.last.err {
+	if c.last.isErr() {
 		return BadOutput("error")
 	}
 	return SimpleOutput(fmt.Sprintf("%d°C", c.last.temp))
