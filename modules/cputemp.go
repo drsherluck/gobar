@@ -2,7 +2,7 @@ package modules
 
 import (
 	"fmt"
-	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -22,27 +22,71 @@ type CpuTempModule struct {
 }
 
 func CpuTemp() *CpuTempModule {
-	files, err := ioutil.ReadDir("/sys/class/thermal")
-	has_err := false
+	files, err := os.ReadDir("/sys/class/hwmon")
 	if err != nil {
-		has_err = true
+		return &CpuTempModule{true, nil, nil, 0}
+	}
+
+	var dir string
+	has_coretemp := false
+	for _, file := range files {
+		hw_dir := fmt.Sprintf("/sys/class/hwmon/%s", file.Name())
+		hw_files, err := os.ReadDir(hw_dir)
+		if err != nil {
+			break
+		}
+
+		for _, hf := range hw_files {
+			if hf.Name() != "name" {
+				continue
+			}
+			data, err := os.ReadFile(fmt.Sprintf("%s/name", hw_dir))
+			if err != nil {
+				break
+			}
+			if strings.TrimSuffix(string(data), "\n") == "coretemp" {
+				has_coretemp = true
+				dir = hw_dir
+				break
+			}
+
+		}
 	}
 
 	var zones []string
-	for _, file := range files {
-		if strings.HasPrefix(file.Name(), "thermal_zone") && file.Name() != "thermal_zone0" {
-			zones = append(zones, file.Name())
+	if has_coretemp {
+		files, err = os.ReadDir(dir)
+		if err != nil {
+			return &CpuTempModule{true, nil, nil, 0}
+		}
+
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), "temp") && strings.HasSuffix(file.Name(), "_input") {
+				zones = append(zones, fmt.Sprintf("%s/%s", dir, file.Name()))
+			}
+		}
+	} else {
+		files, err = os.ReadDir("/sys/class/thermal")
+		if err != nil {
+			return &CpuTempModule{true, nil, nil, 0}
+		}
+
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), "thermal_zone") && file.Name() != "thermal_zone0" {
+				zones = append(zones, fmt.Sprintf("/sys/class/thermal/%s/temp", file.Name()))
+			}
 		}
 	}
+
+	fmt.Println(zones)
+
 	ch := make(chan cpu_result)
-	if has_err == false {
-		go fetchCpuTemp(ch, zones)
-	}
-	return &CpuTempModule{has_err, ch, zones, 0.0}
+	go fetchCpuTemp(ch, zones)
+	return &CpuTempModule{false, ch, zones, 0.0}
 }
 
 func readtemp(zone string) (float64, error) {
-	data, err := os.ReadFile(fmt.Sprintf("/sys/class/thermal/%s/temp", zone))
+	data, err := os.ReadFile(zone)
 	if err != nil {
 		return 0.0, err
 	}
@@ -55,22 +99,22 @@ func readtemp(zone string) (float64, error) {
 }
 
 func getCpuTemp(ch chan cpu_result, zones []string) {
-	var avg = 0.0
+	var max = 0.0
 	for _, zone := range zones {
 		temp, err := readtemp(zone)
 		if err != nil {
 			ch <- cpu_result{0, true}
 			return
 		}
-		avg += temp
+		max = math.Max(temp, max)
 	}
-	ch <- cpu_result{avg / float64(len(zones)), false}
+	ch <- cpu_result{max, false}
 }
 
 func fetchCpuTemp(ch chan cpu_result, zones []string) {
-	ticker := time.NewTicker(time.Second * 6)
+	ticker := time.NewTicker(time.Second)
 	getCpuTemp(ch, zones)
-	for _ = range ticker.C {
+	for range ticker.C {
 		getCpuTemp(ch, zones)
 	}
 }
