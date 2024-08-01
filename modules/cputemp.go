@@ -28,7 +28,7 @@ func CpuTemp() *CpuTempModule {
 	}
 
 	var dir string
-	has_coretemp := false
+	found_cpu := false
 	for _, file := range files {
 		hw_dir := fmt.Sprintf("/sys/class/hwmon/%s", file.Name())
 		hw_files, err := os.ReadDir(hw_dir)
@@ -44,8 +44,9 @@ func CpuTemp() *CpuTempModule {
 			if err != nil {
 				break
 			}
-			if strings.TrimSuffix(string(data), "\n") == "coretemp" {
-				has_coretemp = true
+			name := strings.TrimSuffix(string(data), "\n")
+			if name == "coretemp" || name == "k10temp" {
+				found_cpu = true
 				dir = hw_dir
 				break
 			}
@@ -54,7 +55,7 @@ func CpuTemp() *CpuTempModule {
 	}
 
 	var zones []string
-	if has_coretemp {
+	if found_cpu {
 		files, err = os.ReadDir(dir)
 		if err != nil {
 			return &CpuTempModule{true, nil, nil, 0}
@@ -77,8 +78,6 @@ func CpuTemp() *CpuTempModule {
 			}
 		}
 	}
-
-	fmt.Println(zones)
 
 	ch := make(chan cpu_result)
 	go fetchCpuTemp(ch, zones)
