@@ -45,7 +45,7 @@ func CpuTemp() *CpuTempModule {
 				break
 			}
 			name := strings.TrimSuffix(string(data), "\n")
-			if name == "coretemp" || name == "k10temp" {
+			if name == "coretemp" || name == "zenpower" || name == "k10temp" {
 				found_cpu = true
 				dir = hw_dir
 				break
