@@ -11,7 +11,7 @@ type NetworkConfig struct {
 }
 
 type Config struct {
-	Network NetworkConfig `toml:"omitempty"`
+	Network NetworkConfig
 	Modules []string
 }
 
