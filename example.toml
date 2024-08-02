@@ -1,0 +1,4 @@
+modules = ["network", "volume", "cputemp", "memory", "weather", "battery", "time"]
+
+[network]
+interface = "enp4s0"

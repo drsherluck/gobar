@@ -25,7 +25,7 @@ func connectivity(ch chan bool) {
 	client := http.Client{
 		Timeout: timeout,
 	}
-	for _ = range ticker.C {
+	for range ticker.C {
 		_, err := client.Get("http://google.com")
 		ch <- err == nil
 	}

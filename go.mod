@@ -7,6 +7,7 @@ require (
 	github.com/distatus/battery v0.10.0
 	github.com/itchyny/volume-go v0.2.1
 	github.com/mkideal/cli v0.2.7
+	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/vishvananda/netlink v1.1.0
 )
 
